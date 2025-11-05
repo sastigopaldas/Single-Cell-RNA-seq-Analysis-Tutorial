@@ -73,12 +73,9 @@ alevin-fry generate-permit-list -d fw -k -i sampel_name_map -o sampel_name_quant
 # Collate mapping output
 alevin-fry collate -t 4 -i sampel_name_quant -r sampel_name_map
 
-# Quantify gene/cell counts
+# quantification
 alevin-fry quant -t 4 -i sampel_name_quant -o sampel_name_quant \
-  --tg-map ref/t2g.tsv --resolution cr-like --use-mtx_1.fastq.gz \
-  -2 fastq/SRR35646181_2.fastq.gz \
-  -o sampel_name_map \
-  --tgMap ref/t2g.tsv
+--tg-map ref/t2g.tsv --resolution cr-like --use-mtx
 
 # Generate barcode permit list
 alevin-fry generate-permit-list -d fw -k -i sampel_name_map -o sampel_name_quant

@@ -60,7 +60,22 @@ salmon index -t ref/gencode.v49.transcriptome.fa -i grch38_idx -p 4
 ```
 # Run Salmon Alevin quantification (10x Chromium V3)
 salmon alevin -i grch38_idx -p 4 -l IU --chromiumV3 --sketch \
-  -1 fastq/SRR35646181_1.fastq.gz \
+  -1 fastq/# Run Salmon Alevin quantification (10x Chromium V3)
+salmon alevin -i grch38_idx -p 4 -l IU --chromiumV3 --sketch \
+  -1 fastq/sampel_1.fastq.gz \
+  -2 fastq/sampel_2.fastq.gz \
+  -o sampel_name_map \
+  --tgMap ref/t2g.tsv
+
+# Generate barcode permit list
+alevin-fry generate-permit-list -d fw -k -i sampel_name_map -o sampel_name_quant
+
+# Collate mapping output
+alevin-fry collate -t 4 -i sampel_name_quant -r sampel_name_map
+
+# Quantify gene/cell counts
+alevin-fry quant -t 4 -i sampel_name_quant -o sampel_name_quant \
+  --tg-map ref/t2g.tsv --resolution cr-like --use-mtx_1.fastq.gz \
   -2 fastq/SRR35646181_2.fastq.gz \
   -o sampel_name_map \
   --tgMap ref/t2g.tsv

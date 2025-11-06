@@ -232,19 +232,19 @@ seurat_obj <- FindVariableFeatures(seurat_obj, selection.method = "vst", nfeatur
 
 ### Visualizes variable features with top 10 labeled
 
+# Generate the variable feature plot
 plot1 <- VariableFeaturePlot(seurat_obj)
-plot1
 
 # Extract top 10 variable features
 top10 <- head(VariableFeatures(seurat_obj), 10)
 
-cat("Top 10 variable genes:\n")
-
-print(top10)
-
+# Label top 10 variable genes
 plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE, xnudge = 0, ynudge = 0)
 
-plot2
+# --- Save as high-quality PDF (vector, ideal for publication) ---
+pdf("VariableFeaturePlot_Top10.pdf", width = 6, height = 5, paper = "special")
+print(plot2)
+dev.off()
 
 
 ### Scales data (zero-mean, unit-variance)

@@ -29,11 +29,11 @@ wget -O GRCh38.primary_assembly.genome.fa.gz \
 gunzip -f gencode.v49.annotation.gtf.gz
 gunzip -f GRCh38.primary_assembly.genome.fa.gz
 
-#### Generate transcriptome FASTA
+# Generate transcriptome FASTA
 gffread -w gencode.v49.transcriptome.fa \
   -g GRCh38.primary_assembly.genome.fa gencode.v49.annotation.gtf
 
-#### Inspect reference files
+# Inspect reference files
 head gencode.v49.transcriptome.fa
 head GRCh38.primary_assembly.genome.fa
 head gencode.v49.annotation.gtf
@@ -59,8 +59,7 @@ salmon index -t ref/gencode.v49.transcriptome.fa -i grch38_idx -p 4
 ## Quantification with Alevin-fry
 ```
 # Run Salmon Alevin quantification (10x Chromium V3)
-salmon alevin -i grch38_idx -p 4 -l IU --chromiumV3 --sketch \
-  -1 fastq/# Run Salmon Alevin quantification (10x Chromium V3)
+
 salmon alevin -i grch38_idx -p 4 -l IU --chromiumV3 --sketch \
   -1 fastq/sampel_1.fastq.gz \
   -2 fastq/sampel_2.fastq.gz \

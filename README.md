@@ -212,23 +212,17 @@ cat("Data-driven mt% threshold:", mtx_threshold, "\n")
 ## Duplicate Gene Removal (Post-QC)
 ```
 gene_counts <- table(rownames(seurat_obj))
-
 duplicated_genes <- names(gene_counts[gene_counts > 1])
-
 seurat_obj <- seurat_obj[!rownames(seurat_obj) %in% duplicated_genes, ]
 ```
 
 ## Normalization and Feature Selection
 ```
 ### Normalizes counts using log transformation
-
 seurat_obj <- NormalizeData(seurat_obj, normalization.method = "LogNormalize", scale.factor = 10000)
 
 ### Identifies 2,000 most variable genes
-
 seurat_obj <- FindVariableFeatures(seurat_obj, selection.method = "vst", nfeatures = 2000)
-
-
 
 ### Visualizes variable features with top 10 labeled
 
@@ -241,7 +235,6 @@ top10 <- head(VariableFeatures(seurat_obj), 10)
 # Label top 10 variable genes
 plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE, xnudge = 0, ynudge = 0)
 
-# --- Save as high-quality PDF (vector, ideal for publication) ---
 pdf("VariableFeaturePlot_Top10.pdf", width = 6, height = 5, paper = "special")
 print(plot2)
 dev.off()
@@ -255,61 +248,56 @@ seurat_obj <- ScaleData(seurat_obj, features = VariableFeatures(seurat_obj))
 ## Dimensionality Reduction
 ```
 ### Runs PCA on variable features only
-
 seurat_obj <- RunPCA(seurat_obj, features = VariableFeatures(object = seurat_obj))
 
-
 ### Prints top genes for first 5 PCs
-
 print(seurat_obj[["pca"]], dims = 1:10, nfeatures = 10)
 
-### Shows variance explained by each PC
-
-ElbowPlot(seurat_obj)
+# Generate the Elbow Plot
+p <- ElbowPlot(seurat_obj)
+pdf("ElbowPlot_600dpi.pdf", width = 6, height = 5, paper = "special")
+print(p)
+dev.off()
 ```
 ## Clustering and UMAP
 ```
 ### Clusters cells using KNN graph and Louvain algorithm
-
 seurat_obj <- FindNeighbors(seurat_obj, dims = 1:10)
-
 seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
 
-
 ### Generates 2D UMAP visualization
-
 seurat_obj <- RunUMAP(seurat_obj, dims = 1:10)
 
-DimPlot(seurat_obj, reduction = "umap", label = TRUE)
+# Generate the UMAP plot with cluster labels
+p <- DimPlot(seurat_obj, reduction = "umap", label = TRUE)
+pdf("UMAP_DimPlot_600dpi.pdf", width = 6, height = 5, paper = "special")
+print(p)
+dev.off()
 ```
-## FMarker Gene Identification
+## Marker Gene Identification
 ```
 ### Finds cluster-specific markers
-
-cluster_markers <- FindAllMarkers(seurat_obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-
 cluster_markers <- FindAllMarkers(seurat_obj, only.pos = TRUE, 
                                    min.pct = 0.25, 
                                    logfc.threshold = 0.5,  # More stringent
                                    test.use = "wilcox")  # Explicitly use Wilcoxon
 
-
 ### Extracts top 10 genes per cluster
-
 top_markers <- cluster_markers %>%
   group_by(cluster) %>%
   slice_max(n = 10, order_by = avg_log2FC)
 
-
-### CVisualizes gene expression on UMAP
-
-FeaturePlot(seurat_obj, features = top_markers$gene[1:9])
+### Generate FeaturePlot for top 9 marker genes
+p <- FeaturePlot(seurat_obj, features = top_markers$gene[1:9])
+pdf("FeaturePlot_Top9_600dpi.pdf", width = 9, height = 9, paper = "special")
+print(p)
+dev.off()
 ```
 
 ## Save Results
 ```
-saveRDS(seurat_obj, file = "pbmc10k_processed_seurat.rds")
-write.csv(cluster_markers, "pbmc10k_cluster_markers.csv", row.names = FALSE)
+saveRDS(seurat_obj, file = "Tutorial_processed_seurat.rds")
+write.csv(cluster_markers, "Tutorial_cluster_markers.csv", row.names = FALSE)
 ```
 ## References
 ```
@@ -322,3 +310,4 @@ write.csv(cluster_markers, "pbmc10k_cluster_markers.csv", row.names = FALSE)
     Seurat R package
 
 ```
+##### sastigopaldas05@gmail.com

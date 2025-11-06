@@ -194,21 +194,17 @@ pdf("VlnPlot_qc_600dpi.pdf", width = 10, height = 8, paper = "special")
 print(p)
 dev.off()
 
-
 ### Filters low-quality cells
-
-seurat_obj <- subset(seurat_obj, subset = 
-                     nFeature_RNA > 200 & 
-                     nFeature_RNA < 5000 & 
-                     nCount_RNA > 300 & 
-                     percent.mt < 15)
+seurat_obj <- subset(
+  seurat_obj,
+  subset = nFeature_RNA > 300 & nFeature_RNA < 2500 &
+           nCount_RNA > 500 & nCount_RNA < 10000 &
+           percent.mt < 15
+)
 
 mtx_q75 <- quantile(seurat_obj$percent.mt, 0.75)
-
 mtx_q25 <- quantile(seurat_obj$percent.mt, 0.25)
-
 mtx_threshold <- mtx_q75 + 1.5 * (mtx_q75 - mtx_q25)
-
 cat("Data-driven mt% threshold:", mtx_threshold, "\n")
 
 ```

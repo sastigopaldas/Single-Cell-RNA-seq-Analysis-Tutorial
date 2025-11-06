@@ -130,16 +130,12 @@ cat("Initial dimensions - Genes:", nrow(seurat_obj), "Cells:", ncol(seurat_obj),
 
 ## Gene Name Conversion and Duplicate Handling
 
-
 ```
 ### Reads GTF annotation file
-
 gtf <- read.table("ref/gencode.v49.annotation.gtf", 
                   sep = "\t", comment.char = "#", quote = "", stringsAsFactors = FALSE)
 
-
 ### Extracts clean gene information from GTF
-
 gene_info <- gtf %>%
   filter(V3 == "gene") %>%
   mutate(
@@ -149,29 +145,19 @@ gene_info <- gtf %>%
   select(gene_id, gene_name) %>%
   distinct()
 
-
 ### Removes Ensembl gene version numbers (ENSG00000000003.14 → ENSG00000000003)
-
 rownames(seurat_obj) <- gsub("\\..*$", "", rownames(seurat_obj))
-
 gene_info$gene_id <- gsub("\\..*$", "", gene_info$gene_id)
 
 ### Maps gene symbols to Seurat object
-
 gene_symbols <- gene_info$gene_name[match(rownames(seurat_obj), gene_info$gene_id)]
 valid <- !is.na(gene_symbols)
-
 rownames(seurat_obj)[valid] <- gene_symbols[valid]
 
-
 ### Handles duplicate gene names
-
 counts_matrix <- GetAssayData(seurat_obj, slot = "counts")
-
 unique_genes <- unique(rownames(seurat_obj))
-
 keep_indices_list <- list()
-
 counter <- 1
 
 for(gene in unique_genes) {
@@ -186,25 +172,27 @@ for(gene in unique_genes) {
 }
 
 keep_indices <- unlist(keep_indices_list)
-
 seurat_obj <- seurat_obj[sort(keep_indices), ]
-
-
 ```
 
 
 ## Quality Control
 ```
 ### Calculates mitochondrial and ribosomal percentages
-
 seurat_obj[["percent.mt"]] <- PercentageFeatureSet(seurat_obj, pattern = "^MT-")
-
 seurat_obj[["percent.ribo"]] <- PercentageFeatureSet(seurat_obj, pattern = "^RP[SL]")
 
-
 ### Visualizes QC metric distributions
+p <- VlnPlot(
+  seurat_obj,
+  features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+  ncol = 3
+)
 
-VlnPlot(seurat_obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+# Save as high-resolution PDF
+pdf("VlnPlot_qc_600dpi.pdf", width = 10, height = 8, paper = "special")
+print(p)
+dev.off()
 
 
 ### Filters low-quality cells

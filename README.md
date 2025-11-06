@@ -122,58 +122,207 @@ counts <- ReadMtx(
   feature.column = 1
 )
 counts <- t(counts)
-seurat_obj <- CreateSeuratObject(counts = counts, project = "pbmc10k")
+seurat_obj <- CreateSeuratObject(counts = counts, project = "Tutorial")
 cat("Initial dimensions - Genes:", nrow(seurat_obj), "Cells:", ncol(seurat_obj), "\n")
 
 ```
 
 
-## Gene Name Conversion & QC
+## Gene Name Conversion and Duplicate Handling
+
+
 ```
+### Reads GTF annotation file
+
+gtf <- read.table("ref/gencode.v49.annotation.gtf", 
+                  sep = "\t", comment.char = "#", quote = "", stringsAsFactors = FALSE)
+
+
+### Extracts clean gene information from GTF
+
+gene_info <- gtf %>%
+  filter(V3 == "gene") %>%
+  mutate(
+    gene_id = str_extract(V9, 'gene_id "[^"]+"') %>% str_remove_all('gene_id |"'),
+    gene_name = str_extract(V9, 'gene_name "[^"]+"') %>% str_remove_all('gene_name |"')
+  ) %>%
+  select(gene_id, gene_name) %>%
+  distinct()
+
+
+### Removes Ensembl gene version numbers (ENSG00000000003.14 → ENSG00000000003)
+
+rownames(seurat_obj) <- gsub("\\..*$", "", rownames(seurat_obj))
+
+gene_info$gene_id <- gsub("\\..*$", "", gene_info$gene_id)
+
+### Maps gene symbols to Seurat object
+
+gene_symbols <- gene_info$gene_name[match(rownames(seurat_obj), gene_info$gene_id)]
+valid <- !is.na(gene_symbols)
+
+rownames(seurat_obj)[valid] <- gene_symbols[valid]
+
+
+### Handles duplicate gene names
+
+counts_matrix <- GetAssayData(seurat_obj, slot = "counts")
+
+unique_genes <- unique(rownames(seurat_obj))
+
+keep_indices_list <- list()
+
+counter <- 1
+
+for(gene in unique_genes) {
+  indices <- which(rownames(seurat_obj) == gene)
+  if(length(indices) == 1) {
+    keep_indices_list[[counter]] <- indices
+  } else {
+    expr_sums <- Matrix::rowSums(counts_matrix[indices, ])
+    keep_indices_list[[counter]] <- indices[which.max(expr_sums)]
+  }
+  counter <- counter + 1
+}
+
+keep_indices <- unlist(keep_indices_list)
+
+seurat_obj <- seurat_obj[sort(keep_indices), ]
+
+
+```
+
+
+## Quality Control
+```
+### Calculates mitochondrial and ribosomal percentages
+
 seurat_obj[["percent.mt"]] <- PercentageFeatureSet(seurat_obj, pattern = "^MT-")
+
 seurat_obj[["percent.ribo"]] <- PercentageFeatureSet(seurat_obj, pattern = "^RP[SL]")
+
+
+### Visualizes QC metric distributions
+
 VlnPlot(seurat_obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 
+
+### Filters low-quality cells
+
 seurat_obj <- subset(seurat_obj, subset = 
-                     nFeature_RNA > 200 & nFeature_RNA < 5000 & 
-                     nCount_RNA > 300 & percent.mt < 15)
+                     nFeature_RNA > 200 & 
+                     nFeature_RNA < 5000 & 
+                     nCount_RNA > 300 & 
+                     percent.mt < 15)
+
+mtx_q75 <- quantile(seurat_obj$percent.mt, 0.75)
+
+mtx_q25 <- quantile(seurat_obj$percent.mt, 0.25)
+
+mtx_threshold <- mtx_q75 + 1.5 * (mtx_q75 - mtx_q25)
+
+cat("Data-driven mt% threshold:", mtx_threshold, "\n")
 
 ```
 
-
-## Normalization to Clustering
+## Duplicate Gene Removal (Post-QC)
 ```
-# Normalize, feature selection & scaling
+gene_counts <- table(rownames(seurat_obj))
+
+duplicated_genes <- names(gene_counts[gene_counts > 1])
+
+seurat_obj <- seurat_obj[!rownames(seurat_obj) %in% duplicated_genes, ]
+```
+
+## Normalization and Feature Selection
+```
+### Normalizes counts using log transformation
+
 seurat_obj <- NormalizeData(seurat_obj, normalization.method = "LogNormalize", scale.factor = 10000)
+
+### Identifies 2,000 most variable genes
+
 seurat_obj <- FindVariableFeatures(seurat_obj, selection.method = "vst", nfeatures = 2000)
+
+
+
+### Visualizes variable features with top 10 labeled
+
 plot1 <- VariableFeaturePlot(seurat_obj)
+plot1
+
+# Extract top 10 variable features
 top10 <- head(VariableFeatures(seurat_obj), 10)
+
+cat("Top 10 variable genes:\n")
+
+print(top10)
+
 plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE, xnudge = 0, ynudge = 0)
+
+plot2
+
+
+### Scales data (zero-mean, unit-variance)
+
 seurat_obj <- ScaleData(seurat_obj, features = VariableFeatures(seurat_obj))
+```
 
-# Dimensionality reduction
+## Dimensionality Reduction
+```
+### Runs PCA on variable features only
+
 seurat_obj <- RunPCA(seurat_obj, features = VariableFeatures(object = seurat_obj))
-ElbowPlot(seurat_obj)
 
-# Clustering
+
+### Prints top genes for first 5 PCs
+
+print(seurat_obj[["pca"]], dims = 1:10, nfeatures = 10)
+
+### Shows variance explained by each PC
+
+ElbowPlot(seurat_obj)
+```
+## Clustering and UMAP
+```
+### Clusters cells using KNN graph and Louvain algorithm
+
 seurat_obj <- FindNeighbors(seurat_obj, dims = 1:10)
+
 seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
+
+
+### Generates 2D UMAP visualization
+
 seurat_obj <- RunUMAP(seurat_obj, dims = 1:10)
+
 DimPlot(seurat_obj, reduction = "umap", label = TRUE)
 ```
-
-## Marker Identification
+## FMarker Gene Identification
 ```
-# Find marker genes per cluster
-cluster_markers <- FindAllMarkers(seurat_obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5, test.use = "wilcox")
+### Finds cluster-specific markers
+
+cluster_markers <- FindAllMarkers(seurat_obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+
+cluster_markers <- FindAllMarkers(seurat_obj, only.pos = TRUE, 
+                                   min.pct = 0.25, 
+                                   logfc.threshold = 0.5,  # More stringent
+                                   test.use = "wilcox")  # Explicitly use Wilcoxon
+
+
+### Extracts top 10 genes per cluster
+
 top_markers <- cluster_markers %>%
   group_by(cluster) %>%
   slice_max(n = 10, order_by = avg_log2FC)
 
+
+### CVisualizes gene expression on UMAP
+
 FeaturePlot(seurat_obj, features = top_markers$gene[1:9])
 ```
 
-## Final Output
+## Save Results
 ```
 saveRDS(seurat_obj, file = "pbmc10k_processed_seurat.rds")
 write.csv(cluster_markers, "pbmc10k_cluster_markers.csv", row.names = FALSE)

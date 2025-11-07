@@ -17,7 +17,7 @@ salmon --version || true
 gffread --version || true
 ```
 ## Reference Preparation
-
+[![Tutorial PDF Preview](images/pdf_preview.png)](ElbowPlot_600dpi.pdf)
 #### Download reference genome and annotation (GENCODE v49)
 ```
 wget -O gencode.v49.annotation.gtf.gz \

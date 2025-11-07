@@ -208,7 +208,7 @@ mtx_threshold <- mtx_q75 + 1.5 * (mtx_q75 - mtx_q25)
 cat("Data-driven mt% threshold:", mtx_threshold, "\n")
 
 ```
-
+![Workflow diagram](images/VlnPlot_qc.png)
 ## Duplicate Gene Removal (Post-QC)
 ```
 gene_counts <- table(rownames(seurat_obj))
@@ -244,7 +244,7 @@ dev.off()
 
 seurat_obj <- ScaleData(seurat_obj, features = VariableFeatures(seurat_obj))
 ```
-
+![Workflow diagram](images/VariableFeaturePlot.png)
 ## Dimensionality Reduction
 ```
 ### Runs PCA on variable features only
@@ -259,6 +259,7 @@ pdf("ElbowPlot_600dpi.pdf", width = 6, height = 5, paper = "special")
 print(p)
 dev.off()
 ```
+![Workflow diagram](images/ElbowPlot.png)
 ## Clustering and UMAP
 ```
 ### Clusters cells using KNN graph and Louvain algorithm
@@ -274,6 +275,7 @@ pdf("UMAP_DimPlot_600dpi.pdf", width = 6, height = 5, paper = "special")
 print(p)
 dev.off()
 ```
+![Workflow diagram](images/UMAP_DimPlot.png)
 ## Marker Gene Identification
 ```
 ### Finds cluster-specific markers
@@ -293,7 +295,7 @@ pdf("FeaturePlot_Top9_600dpi.pdf", width = 9, height = 9, paper = "special")
 print(p)
 dev.off()
 ```
-
+![Workflow diagram](images/FeaturePlot.png)
 ## Save Results
 ```
 saveRDS(seurat_obj, file = "Tutorial_processed_seurat.rds")
